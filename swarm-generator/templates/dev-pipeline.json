@@ -1,0 +1,79 @@
+{
+  "name": "dev-pipeline",
+  "display_name": "Development Pipeline",
+  "description": "Build -> Lint -> Test -> Document workflow",
+  "version": "2.2",
+  "execution_mode": "sequential",
+  "summary_file": "docs/SWARM-SUMMARY.md",
+  "teammates": [
+    {
+      "name": "builder",
+      "role": "Writes code, implements features",
+      "required_hooks": ["format-on-save"],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit", "Write"],
+      "prompt_template": "You are BUILDER in a dev-pipeline swarm.\n\n## Your Task\nImplement: {{feature}}\n\n## Instructions\n1. Explore the codebase to understand existing patterns\n2. Implement the requested feature/fix\n3. Follow existing code style and patterns\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit, Write\nDO NOT use: Bash, WebFetch, or install any packages.\n\n## Hook Awareness\nPostToolUse hooks auto-format with {{formatter}}.\nDON'T run formatters manually.\n\n## Summary Requirement\nAfter implementation, APPEND to {{summary_file}}:\n```\n## Builder Summary\n- Feature: {{feature}}\n- Files created/modified: [list]\n- Status: complete/partial\n```"
+    },
+    {
+      "name": "linter",
+      "role": "Formats code and fixes lint errors",
+      "required_hooks": ["formatter", "linter"],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit", "Bash"],
+      "prompt_template": "You are LINTER in a dev-pipeline swarm.\n\n## Your Task\nVerify code quality after builder's changes.\n\n## Instructions\n1. Check recently modified files for formatting issues\n2. Run additional linting: {{lint_command}}\n3. Fix style issues only (no logic changes)\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit, Bash (for running linters)\nDO NOT use: Write, WebFetch, pip install, npm install, or any package installation.\nUse ONLY tools already installed on the system.\n\n## Hook Awareness\nPostToolUse hooks run {{formatter}} automatically.\n\n## Summary Requirement\nAfter linting, APPEND to {{summary_file}}:\n```\n## Linter Summary\n- Files checked: N\n- Issues fixed: X\n- Status: clean/has warnings\n```"
+    },
+    {
+      "name": "validator",
+      "role": "Runs tests, reports failures",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Bash", "Edit"],
+      "prompt_template": "You are VALIDATOR in a dev-pipeline swarm.\n\n## Your Task\nRun the test suite and report results.\n\n## Instructions\n1. Run tests: {{test_command}}\n2. Report all results\n3. If failures, provide error details\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Bash (for running tests), Edit (for summary)\nDO NOT use: Write, WebFetch, pip install, npm install, or any package installation.\nUse ONLY tools already installed on the system.\n\n## Summary Requirement\nAfter testing, APPEND to {{summary_file}}:\n```\n## Validator Summary\n- Tests run: N\n- Passed: X, Failed: Y\n- Status: PASS/FAIL\n```"
+    },
+    {
+      "name": "documenter",
+      "role": "Summarizes project status",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are DOCUMENTER in a dev-pipeline swarm.\n\n## Your Task\nCreate final project summary.\n\n## Instructions\n1. Read {{summary_file}} for agent summaries\n2. Review changes made\n3. Write final status\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Final Summary\nAPPEND to {{summary_file}}:\n```\n---\n## Project Status (Final)\n**Date:** [date]\n**Task:** {{feature}}\n**Result:** SUCCESS/PARTIAL/FAILED\n\n### What Was Built\n- [summary]\n\n### Files Changed\n- [list]\n\n### Test Results\n- [pass/fail summary]\n\n### Next Steps\n- [recommendations]\n```"
+    }
+  ],
+  "tasks": [
+    {
+      "subject": "Build: {{feature}}",
+      "description": "Implement the requested feature.",
+      "activeForm": "Building...",
+      "agent": "builder",
+      "order": 1
+    },
+    {
+      "subject": "Lint: Format and verify",
+      "description": "Verify code quality and fix style issues.",
+      "activeForm": "Linting...",
+      "agent": "linter",
+      "order": 2,
+      "blockedBy": [1]
+    },
+    {
+      "subject": "Validate: Run tests",
+      "description": "Run test suite and report results.",
+      "activeForm": "Testing...",
+      "agent": "validator",
+      "order": 3,
+      "blockedBy": [2]
+    },
+    {
+      "subject": "Document: Summarize status",
+      "description": "Create final project summary.",
+      "activeForm": "Documenting...",
+      "agent": "documenter",
+      "order": 4,
+      "blockedBy": [3]
+    }
+  ],
+  "variables": {
+    "feature": "User-provided feature description",
+    "formatter": "Stack-specific formatter",
+    "lint_command": "Stack-specific lint command",
+    "test_command": "Stack-specific test command",
+    "summary_file": "docs/SWARM-SUMMARY.md"
+  },
+  "hooks_required": ["format-on-save", "secrets-check"]
+}

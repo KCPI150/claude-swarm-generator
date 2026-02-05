@@ -1,0 +1,41 @@
+{
+  "name": "angular",
+  "display_name": "Angular (TypeScript)",
+  "detect_files": ["angular.json", "*.component.ts", "*.module.ts"],
+  "package_manager": "npm",
+  "tools": {
+    "formatter": {
+      "name": "prettier",
+      "command": "npx prettier --write",
+      "config_files": [".prettierrc", ".prettierrc.json"]
+    },
+    "linter": {
+      "name": "eslint",
+      "command": "npx eslint --fix",
+      "alternatives": ["ng lint"],
+      "config_files": [".eslintrc.json", "eslint.config.js"]
+    },
+    "type_checker": {
+      "name": "tsc",
+      "command": "npx tsc --noEmit",
+      "config_files": ["tsconfig.json"]
+    },
+    "test_runner": {
+      "name": "karma",
+      "command": "ng test --watch=false",
+      "alternatives": ["jest"],
+      "config_files": ["karma.conf.js", "jest.config.js"]
+    },
+    "build": {
+      "name": "ng",
+      "command": "ng build"
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:prettier"],
+    "linter": ["PostToolUse:prettier", "PostToolUse:eslint"],
+    "validator": ["Stop:ng-test"]
+  },
+  "file_extensions": [".ts", ".html", ".scss", ".css"],
+  "ignore_patterns": ["node_modules", "dist", ".angular"]
+}

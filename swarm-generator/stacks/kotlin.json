@@ -1,0 +1,35 @@
+{
+  "name": "kotlin",
+  "display_name": "Kotlin (Android/JVM)",
+  "detect_files": ["build.gradle.kts", "build.gradle", "*.kt", "settings.gradle.kts"],
+  "package_manager": "gradle",
+  "tools": {
+    "formatter": {
+      "name": "ktlint",
+      "command": "ktlint --format",
+      "alternatives": ["./gradlew ktlintFormat"],
+      "config_files": [".editorconfig", "ktlint.gradle.kts"]
+    },
+    "linter": {
+      "name": "detekt",
+      "command": "./gradlew detekt",
+      "config_files": ["detekt.yml", "config/detekt/detekt.yml"]
+    },
+    "test_runner": {
+      "name": "gradle",
+      "command": "./gradlew test",
+      "alternatives": ["./gradlew connectedAndroidTest"]
+    },
+    "build": {
+      "name": "gradle",
+      "command": "./gradlew build"
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:ktlint"],
+    "linter": ["PostToolUse:ktlint", "PostToolUse:detekt"],
+    "validator": ["Stop:gradle-test"]
+  },
+  "file_extensions": [".kt", ".kts"],
+  "ignore_patterns": ["build", ".gradle", ".idea"]
+}

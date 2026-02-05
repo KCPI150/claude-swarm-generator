@@ -1,0 +1,39 @@
+{
+  "name": "airflow",
+  "display_name": "Apache Airflow (DAGs)",
+  "detect_files": ["dags/", "*_dag.py", "airflow.cfg"],
+  "package_manager": "pip",
+  "tools": {
+    "formatter": {
+      "name": "ruff",
+      "command": "ruff format",
+      "config_files": ["pyproject.toml", "ruff.toml"]
+    },
+    "linter": {
+      "name": "ruff",
+      "command": "ruff check --fix",
+      "config_files": ["pyproject.toml"]
+    },
+    "validator": {
+      "name": "airflow",
+      "command": "airflow dags test",
+      "alternatives": ["python -c \"from dags import *\""]
+    },
+    "dag_check": {
+      "name": "airflow",
+      "command": "airflow dags list-import-errors"
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:ruff-format"],
+    "linter": ["PostToolUse:ruff-format", "PostToolUse:ruff-check"],
+    "validator": ["Stop:airflow-dag-test"]
+  },
+  "file_extensions": [".py"],
+  "ignore_patterns": ["__pycache__", ".venv", "logs"],
+  "conventions": {
+    "dag_naming": "*_dag.py or dag_*.py",
+    "task_ids": "snake_case",
+    "dag_ids": "snake_case"
+  }
+}

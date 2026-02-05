@@ -1,0 +1,76 @@
+{
+  "name": "code-review",
+  "display_name": "Code Review Pipeline",
+  "description": "Review -> Security -> Approve -> Document workflow",
+  "version": "2.2",
+  "execution_mode": "sequential",
+  "summary_file": "docs/SWARM-SUMMARY.md",
+  "teammates": [
+    {
+      "name": "reviewer",
+      "role": "Reviews code for quality and best practices",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are REVIEWER in a code-review swarm.\n\n## Your Task\nReview code quality for: {{feature}}\n\n## Instructions\n1. Read all changed files\n2. Check for quality, patterns, bugs, performance\n3. Document findings with severity (CRITICAL/WARNING/SUGGESTION)\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit (for summary file only)\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Summary Requirement\nAfter review, APPEND to {{summary_file}}:\n```\n## Reviewer Summary\n- Files reviewed: N\n- Issues: X CRITICAL, Y WARNING, Z SUGGESTION\n- Recommendation: approve/request changes\n```"
+    },
+    {
+      "name": "security",
+      "role": "Reviews code for security vulnerabilities",
+      "required_hooks": ["secrets-check"],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are SECURITY in a code-review swarm.\n\n## Your Task\nSecurity review for: {{feature}}\n\n## Instructions\n1. Check for OWASP Top 10 vulnerabilities\n2. Check for secrets/credentials in code\n3. Review dependencies for known vulnerabilities\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit (for summary file only)\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Hook Awareness\nPreToolUse hooks check for secrets automatically.\n\n## Summary Requirement\nAfter review, APPEND to {{summary_file}}:\n```\n## Security Summary\n- Vulnerabilities: N (X critical)\n- Secrets found: none/[count]\n- Recommendation: secure/needs fixes\n```"
+    },
+    {
+      "name": "approver",
+      "role": "Makes final approval decision",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are APPROVER in a code-review swarm.\n\n## Your Task\nMake final approval decision.\n\n## Instructions\n1. Review findings from reviewer and security\n2. Weigh issues by severity\n3. Make decision: APPROVED or CHANGES REQUESTED\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit (for summary file only)\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Summary Requirement\nAfter decision, APPEND to {{summary_file}}:\n```\n## Approver Summary\n- Decision: APPROVED/CHANGES REQUESTED\n- Blocking issues: [count or none]\n- Required fixes: [list if any]\n```"
+    },
+    {
+      "name": "documenter",
+      "role": "Summarizes review status",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are DOCUMENTER in a code-review swarm.\n\n## Your Task\nCreate final review summary.\n\n## Instructions\n1. Read {{summary_file}} for agent summaries\n2. Compile final review status\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Final Summary\nAPPEND to {{summary_file}}:\n```\n---\n## Review Status (Final)\n**Date:** [date]\n**Review:** {{feature}}\n**Verdict:** APPROVED/CHANGES REQUESTED\n\n### Summary\n- Code quality: [assessment]\n- Security: [assessment]\n\n### Action Items\n- [list required changes, if any]\n```"
+    }
+  ],
+  "tasks": [
+    {
+      "subject": "Review: Code quality check",
+      "description": "Review code for quality and patterns.",
+      "activeForm": "Reviewing...",
+      "agent": "reviewer",
+      "order": 1
+    },
+    {
+      "subject": "Security: Vulnerability scan",
+      "description": "Check for security vulnerabilities.",
+      "activeForm": "Scanning...",
+      "agent": "security",
+      "order": 2,
+      "blockedBy": [1]
+    },
+    {
+      "subject": "Approve: Final decision",
+      "description": "Make approval decision.",
+      "activeForm": "Deciding...",
+      "agent": "approver",
+      "order": 3,
+      "blockedBy": [2]
+    },
+    {
+      "subject": "Document: Summarize review",
+      "description": "Create final review summary.",
+      "activeForm": "Documenting...",
+      "agent": "documenter",
+      "order": 4,
+      "blockedBy": [3]
+    }
+  ],
+  "variables": {
+    "feature": "What is being reviewed",
+    "summary_file": "docs/SWARM-SUMMARY.md"
+  },
+  "hooks_required": ["secrets-check"]
+}

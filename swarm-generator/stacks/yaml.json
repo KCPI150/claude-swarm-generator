@@ -1,0 +1,36 @@
+{
+  "name": "yaml",
+  "display_name": "YAML/Config Files",
+  "detect_files": ["*.yaml", "*.yml", ".github/workflows/"],
+  "package_manager": null,
+  "tools": {
+    "formatter": {
+      "name": "prettier",
+      "command": "npx prettier --write",
+      "alternatives": ["yamlfmt"],
+      "config_files": [".prettierrc"]
+    },
+    "linter": {
+      "name": "yamllint",
+      "command": "yamllint",
+      "config_files": [".yamllint", ".yamllint.yaml"]
+    },
+    "validator": {
+      "name": "yq",
+      "command": "yq eval '.' "
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:yaml-format"],
+    "linter": ["PostToolUse:yamllint"],
+    "validator": []
+  },
+  "file_extensions": [".yaml", ".yml"],
+  "ignore_patterns": [],
+  "subtypes": {
+    "github_actions": ".github/workflows/*.yml",
+    "kubernetes": "k8s/*.yaml",
+    "docker_compose": "docker-compose*.yml",
+    "ansible": "playbooks/*.yml"
+  }
+}

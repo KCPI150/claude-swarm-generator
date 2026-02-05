@@ -1,0 +1,39 @@
+{
+  "name": "terraform",
+  "display_name": "Terraform (IaC)",
+  "detect_files": ["*.tf", "*.tfvars", "terraform.lock.hcl"],
+  "package_manager": null,
+  "tools": {
+    "formatter": {
+      "name": "terraform",
+      "command": "terraform fmt -recursive",
+      "config_files": [".terraform-version"]
+    },
+    "linter": {
+      "name": "tflint",
+      "command": "tflint --recursive",
+      "config_files": [".tflint.hcl"]
+    },
+    "validator": {
+      "name": "terraform",
+      "command": "terraform validate"
+    },
+    "security": {
+      "name": "tfsec",
+      "command": "tfsec .",
+      "alternatives": ["checkov"]
+    },
+    "plan": {
+      "name": "terraform",
+      "command": "terraform plan"
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:terraform-fmt"],
+    "linter": ["PostToolUse:terraform-fmt", "PostToolUse:tflint"],
+    "validator": ["Stop:terraform-validate"],
+    "security": ["PreToolUse:tfsec"]
+  },
+  "file_extensions": [".tf", ".tfvars"],
+  "ignore_patterns": [".terraform", "*.tfstate", "*.tfstate.backup"]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "sql",
+  "display_name": "SQL (Database)",
+  "detect_files": ["*.sql", "migrations/", "schemas/"],
+  "package_manager": null,
+  "tools": {
+    "formatter": {
+      "name": "sqlfluff",
+      "command": "sqlfluff fix",
+      "alternatives": ["sqlfmt"],
+      "config_files": [".sqlfluff", "pyproject.toml"]
+    },
+    "linter": {
+      "name": "sqlfluff",
+      "command": "sqlfluff lint",
+      "config_files": [".sqlfluff"]
+    },
+    "validator": {
+      "name": "sqlfluff",
+      "command": "sqlfluff lint --dialect postgres"
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:sqlfluff-format"],
+    "linter": ["PostToolUse:sqlfluff-lint"],
+    "validator": []
+  },
+  "file_extensions": [".sql"],
+  "ignore_patterns": [],
+  "dialects": ["postgres", "mysql", "bigquery", "snowflake", "redshift"]
+}

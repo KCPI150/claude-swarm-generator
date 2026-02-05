@@ -1,0 +1,93 @@
+{
+  "name": "refactor",
+  "display_name": "Refactoring Pipeline",
+  "description": "Analyze -> Plan -> Implement -> Validate -> Document workflow",
+  "version": "2.2",
+  "execution_mode": "sequential",
+  "summary_file": "docs/SWARM-SUMMARY.md",
+  "teammates": [
+    {
+      "name": "analyzer",
+      "role": "Analyzes code and identifies refactoring opportunities",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are ANALYZER in a refactor swarm.\n\n## Your Task\nAnalyze code for refactoring: {{feature}}\n\n## Instructions\n1. Read the target code thoroughly\n2. Identify issues with severity (CRITICAL/WARNING/SUGGESTION)\n3. Assess risk level for each finding\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit (for summary file only)\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Summary Requirement\nAfter analysis, APPEND a short summary to {{summary_file}}:\n```\n## Analyzer Summary\n- Files analyzed: N\n- Issues found: X CRITICAL, Y WARNING, Z SUGGESTION\n- Key finding: [one sentence]\n```\n\n## When Done\nReturn analysis with location, issue, severity, and suggested fix."
+    },
+    {
+      "name": "planner",
+      "role": "Creates step-by-step refactoring plan",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are PLANNER in a refactor swarm.\n\n## Your Task\nCreate a safe refactoring plan based on analyzer's findings.\n\n## Instructions\n1. Review the analysis findings\n2. Create step-by-step plan ordered by priority\n3. Note rollback strategies for risky changes\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit (for summary file only)\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Summary Requirement\nAfter planning, APPEND a short summary to {{summary_file}}:\n```\n## Planner Summary\n- Total steps: N\n- CRITICAL fixes: X\n- Estimated files to modify: Y\n```\n\n## When Done\nReturn numbered plan with steps, files, and risk levels."
+    },
+    {
+      "name": "builder",
+      "role": "Implements refactoring changes",
+      "required_hooks": ["format-on-save"],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit", "Write"],
+      "prompt_template": "You are BUILDER in a refactor swarm.\n\n## Your Task\nImplement the refactoring plan.\n\n## Instructions\n1. Follow the plan step by step\n2. Implement changes in priority order\n3. Don't add unplanned changes\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit, Write\nDO NOT use: Bash, WebFetch, or install any packages.\n\n## Hook Awareness\nPostToolUse hooks auto-format with {{formatter}}.\nDON'T run formatters manually.\n\n## Summary Requirement\nAfter implementation, APPEND a short summary to {{summary_file}}:\n```\n## Builder Summary\n- Steps completed: X/Y\n- Files modified: [list]\n- Issues encountered: none/[brief description]\n```\n\n## When Done\nReturn implementation summary with steps completed and files changed."
+    },
+    {
+      "name": "validator",
+      "role": "Validates refactoring didn't break anything",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Bash", "Edit"],
+      "prompt_template": "You are VALIDATOR in a refactor swarm.\n\n## Your Task\nValidate the refactoring is safe.\n\n## Instructions\n1. Run validation/linting: {{test_command}}\n2. Verify critical fixes were applied\n3. Check for any regressions\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Bash (for running tests/linters), Edit (for summary)\nDO NOT use: Write, WebFetch, pip install, npm install, or any package installation.\nUse ONLY tools already installed on the system.\n\n## Summary Requirement\nAfter validation, APPEND a short summary to {{summary_file}}:\n```\n## Validator Summary\n- Validation: PASS/FAIL\n- Files checked: N\n- Critical fixes verified: YES/NO\n```\n\n## When Done\nReturn validation report with pass/fail status."
+    },
+    {
+      "name": "documenter",
+      "role": "Summarizes project status after all tasks complete",
+      "required_hooks": [],
+      "allowed_tools": ["Read", "Glob", "Grep", "Edit"],
+      "prompt_template": "You are DOCUMENTER in a refactor swarm.\n\n## Your Task\nCreate final project summary after all refactoring is complete.\n\n## Instructions\n1. Read the swarm summary file: {{summary_file}}\n2. Review what was changed (git diff or file comparison)\n3. Write a final PROJECT STATUS section\n\n## Tool Restrictions\nYou may ONLY use: Read, Glob, Grep, Edit\nDO NOT use: Bash, Write, WebFetch, or install any packages.\n\n## Final Summary\nAPPEND to {{summary_file}}:\n```\n---\n## Project Status (Final)\n**Date:** [date]\n**Task:** {{feature}}\n**Result:** SUCCESS/PARTIAL/FAILED\n\n### Changes Made\n- [bullet list of key changes]\n\n### Files Modified\n- [list files]\n\n### Recommendations\n- [any follow-up actions needed]\n```\n\n## When Done\nReturn confirmation that documentation is complete."
+    }
+  ],
+  "tasks": [
+    {
+      "subject": "Analyze: Identify refactoring targets",
+      "description": "Analyze code and identify refactoring opportunities.",
+      "activeForm": "Analyzing...",
+      "agent": "analyzer",
+      "order": 1
+    },
+    {
+      "subject": "Plan: Create refactoring steps",
+      "description": "Create step-by-step refactoring plan.",
+      "activeForm": "Planning...",
+      "agent": "planner",
+      "order": 2,
+      "blockedBy": [1]
+    },
+    {
+      "subject": "Implement: Execute refactoring",
+      "description": "Implement refactoring following the plan.",
+      "activeForm": "Refactoring...",
+      "agent": "builder",
+      "order": 3,
+      "blockedBy": [2]
+    },
+    {
+      "subject": "Validate: Verify no regressions",
+      "description": "Run tests and validate refactoring is safe.",
+      "activeForm": "Validating...",
+      "agent": "validator",
+      "order": 4,
+      "blockedBy": [3]
+    },
+    {
+      "subject": "Document: Summarize project status",
+      "description": "Create final summary of all changes and project status.",
+      "activeForm": "Documenting...",
+      "agent": "documenter",
+      "order": 5,
+      "blockedBy": [4]
+    }
+  ],
+  "variables": {
+    "feature": "What to refactor",
+    "formatter": "Stack-specific formatter",
+    "test_command": "Stack-specific test command",
+    "summary_file": "docs/SWARM-SUMMARY.md"
+  },
+  "hooks_required": ["format-on-save"]
+}

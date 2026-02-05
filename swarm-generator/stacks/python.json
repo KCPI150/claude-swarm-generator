@@ -1,0 +1,38 @@
+{
+  "name": "python",
+  "display_name": "Python",
+  "detect_files": ["pyproject.toml", "setup.py", "requirements.txt", "*.py"],
+  "package_manager": "pip",
+  "tools": {
+    "formatter": {
+      "name": "ruff",
+      "command": "ruff format",
+      "alternatives": ["black"],
+      "config_files": ["pyproject.toml", "ruff.toml"]
+    },
+    "linter": {
+      "name": "ruff",
+      "command": "ruff check --fix",
+      "alternatives": ["flake8", "pylint"],
+      "config_files": ["pyproject.toml", "ruff.toml"]
+    },
+    "type_checker": {
+      "name": "mypy",
+      "command": "mypy .",
+      "alternatives": ["pyright"],
+      "config_files": ["pyproject.toml", "mypy.ini"]
+    },
+    "test_runner": {
+      "name": "pytest",
+      "command": "pytest",
+      "config_files": ["pyproject.toml", "pytest.ini"]
+    }
+  },
+  "hooks": {
+    "builder": ["PostToolUse:ruff-format"],
+    "linter": ["PostToolUse:ruff-format", "PostToolUse:ruff-check"],
+    "validator": ["Stop:run-pytest"]
+  },
+  "file_extensions": [".py", ".pyi"],
+  "ignore_patterns": ["__pycache__", ".venv", "venv", ".pytest_cache"]
+}
