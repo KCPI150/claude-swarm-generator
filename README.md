@@ -1,6 +1,6 @@
 # Claude Swarm Generator
 
-Multi-agent swarm orchestration for Claude Code with deterministic hooks and coordinated teammates.
+Multi-agent swarm orchestration for Claude Code with **enforced** deterministic hooks and coordinated teammates.
 
 ## What Is This?
 
@@ -8,8 +8,10 @@ This tool generates **swarms**—coordinated teams of Claude agents that work to
 
 - **Structured workflows** with task dependencies
 - **Specialized teammates** with defined roles and tool restrictions
-- **Deterministic hooks** that enforce code quality automatically
+- **Enforced hooks** that are verified before any subagent spawns
 - **Feedback loops** where validators can trigger builder refactors
+
+**v2.3:** Hook enforcement is now a blocking gate. Swarms will NOT start unless all required hooks are verified to be configured in `~/.claude/settings.json`.
 
 ## Key Concepts
 
@@ -27,29 +29,43 @@ This tool generates **swarms**—coordinated teams of Claude agents that work to
 
 **Teammate example:** Builder writes code → Validator runs tests → If tests fail, Builder refactors → Validator re-tests → Documenter summarizes
 
-### Deterministic Hooks
+### Deterministic Hooks (Enforced)
 
 Hooks are shell scripts that run **automatically** at specific lifecycle events—Claude doesn't choose whether to run them, they just happen.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Claude edits a Python file                                      │
+│  BEFORE SWARM STARTS                                             │
+│         │                                                        │
+│         ▼                                                        │
+│  Verify hooks exist as files                                     │
+│         │                                                        │
+│         ▼                                                        │
+│  Verify hooks are configured in settings.json  ◄── BLOCKING GATE │
+│         │                                                        │
+│         ▼                                                        │
+│  If ANY check fails → STOP (do not spawn subagents)              │
+│  If ALL checks pass → Proceed to spawn teammates                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  DURING EXECUTION (after enforcement passes)                     │
+│         │                                                        │
+│         ▼                                                        │
+│  Subagent edits a Python file                                    │
 │         │                                                        │
 │         ▼                                                        │
 │  PostToolUse hook fires automatically                            │
 │         │                                                        │
 │         ▼                                                        │
-│  ruff-format.sh runs (guaranteed)                                │
-│         │                                                        │
-│         ▼                                                        │
-│  File is now formatted (Claude didn't have to remember)          │
+│  ruff-format.sh runs (guaranteed - we verified it's configured)  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Why deterministic?**
-- Claude might forget to run a formatter
-- Skills are "advisory"—Claude may skip them situationally
-- Hooks are "enforcement"—they always execute
+**Why enforced?**
+- Claude might forget to run a formatter → Hooks run automatically
+- Skills are "advisory"—Claude may skip them → Hooks always execute
+- Hooks might not be configured → **Enforcement verifies before starting**
 
 **Hook types:**
 

@@ -3,15 +3,14 @@ name: deploy-swarm
 description: "Generate and deploy multi-agent swarms with hooks. Auto-detects tech stack, selects templates, installs hooks, spawns teammates. Use for dev pipelines, code review, refactoring workflows."
 ---
 
-# Deploy Swarm (v2)
+# Deploy Swarm (v2.3)
 
-Generate and deploy a complete multi-agent swarm with appropriate hooks.
+Generate and deploy a complete multi-agent swarm with **enforced** hooks.
 
-**v2 Changes:**
-- Better project detection (checks actual files)
-- Leader-managed task updates (subagents can't update tasks)
-- Sequential agent spawning with completion tracking
-- **Proper hook verification and creation**
+**v2.3 Changes:**
+- **ENFORCED hook verification** — Swarm will NOT start unless hooks are configured in settings.json
+- Verification checks both file existence AND settings.json configuration
+- Clear PASS/FAIL gate before spawning any subagents
 
 ## Usage
 
@@ -54,141 +53,122 @@ cat ~/.claude/swarm-generator/templates/{TEMPLATE}.json
 
 ---
 
-## Step 3: Hook Verification and Creation (CRITICAL)
+## Step 3: Hook Enforcement (CRITICAL - BLOCKING GATE)
 
-**For each teammate in the template, verify their required hooks exist.**
+**This step is MANDATORY. Do NOT proceed to Step 4 unless ALL checks pass.**
 
-### 3a. Build Hook Requirements Map
+### 3a. Define Required Hooks for Stack
 
-From template, each teammate has `required_hooks`. Map these to actual scripts:
+Map the stack to required hook scripts:
 
-| Teammate | Required Hook | Stack: python | Stack: angular |
-|----------|---------------|---------------|----------------|
-| builder | format-on-save | ruff-format.sh | prettier.sh |
-| linter | formatter | ruff-format.sh | prettier.sh |
-| linter | linter | ruff-check.sh | eslint.sh |
-| validator | test-runner | (run pytest) | (run ng test) |
-| security | secrets-check | secrets-check.sh | secrets-check.sh |
+| Stack | Formatter | Linter | Security |
+|-------|-----------|--------|----------|
+| python | ruff-format.sh | ruff-check.sh | secrets-check.sh |
+| angular | prettier.sh | eslint.sh | secrets-check.sh |
+| kotlin | ktlint.sh | — | secrets-check.sh |
+| terraform | terraform-fmt.sh | tflint.sh | secrets-check.sh |
+| sql | sqlfluff-format.sh | yamllint.sh | secrets-check.sh |
+| airflow | ruff-format.sh | ruff-check.sh | secrets-check.sh |
+| yaml | prettier.sh | yamllint.sh | secrets-check.sh |
 
-### 3b. Verify Each Hook Exists
+### 3b. Verify Hook FILES Exist
 
 ```bash
-# Check if hook script exists
 HOOKS_DIR="$HOME/.claude/swarm-generator/hooks"
 
-# For each required hook, verify file exists
-ls "$HOOKS_DIR/formatters/ruff-format.sh" 2>/dev/null || echo "MISSING: ruff-format.sh"
-ls "$HOOKS_DIR/validators/ruff-check.sh" 2>/dev/null || echo "MISSING: ruff-check.sh"
-ls "$HOOKS_DIR/security/secrets-check.sh" 2>/dev/null || echo "MISSING: secrets-check.sh"
+# Check each required hook file
+echo "=== Hook File Verification ==="
+[ -x "$HOOKS_DIR/formatters/{FORMATTER}" ] && echo "✓ {FORMATTER} exists" || echo "✗ {FORMATTER} MISSING"
+[ -x "$HOOKS_DIR/validators/{LINTER}" ] && echo "✓ {LINTER} exists" || echo "✗ {LINTER} MISSING"
+[ -x "$HOOKS_DIR/security/secrets-check.sh" ] && echo "✓ secrets-check.sh exists" || echo "✗ secrets-check.sh MISSING"
+[ -x "$HOOKS_DIR/security/block-dangerous.sh" ] && echo "✓ block-dangerous.sh exists" || echo "✗ block-dangerous.sh MISSING"
 ```
 
-### 3c. Create Missing Hooks
+### 3c. Verify Hooks are CONFIGURED in settings.json (CRITICAL)
 
-**If a hook is missing, CREATE IT:**
+**This is the enforcement step. Check that hooks are actually wired up to fire.**
 
 ```bash
-# Example: Create missing formatter hook
-cat > "$HOOKS_DIR/formatters/NEW_FORMATTER.sh" << 'EOF'
-#!/bin/bash
-# Hook: PostToolUse formatter for LANGUAGE
-if [ -n "$CLAUDE_FILE_PATHS" ]; then
-  for file in $CLAUDE_FILE_PATHS; do
-    if [[ "$file" =~ \.EXT$ ]]; then
-      COMMAND "$file" 2>/dev/null || true
-    fi
-  done
+echo "=== Hook Configuration Verification ==="
+SETTINGS="$HOME/.claude/settings.json"
+
+# Check if settings.json exists
+if [ ! -f "$SETTINGS" ]; then
+  echo "✗ FAIL: ~/.claude/settings.json does not exist"
+  echo "  Run: ./install.sh to configure hooks"
+  exit 1
 fi
-EOF
-chmod +x "$HOOKS_DIR/formatters/NEW_FORMATTER.sh"
+
+# Check PostToolUse hooks are configured
+FORMATTER_CONFIGURED=$(jq -r '.hooks.PostToolUse[]?.hooks[]? | select(contains("{FORMATTER}"))' "$SETTINGS" 2>/dev/null)
+if [ -n "$FORMATTER_CONFIGURED" ]; then
+  echo "✓ {FORMATTER} configured in PostToolUse"
+else
+  echo "✗ FAIL: {FORMATTER} NOT configured in settings.json"
+fi
+
+# Check PreToolUse security hooks
+SECRETS_CONFIGURED=$(jq -r '.hooks.PreToolUse[]?.hooks[]? | select(contains("secrets-check"))' "$SETTINGS" 2>/dev/null)
+if [ -n "$SECRETS_CONFIGURED" ]; then
+  echo "✓ secrets-check.sh configured in PreToolUse"
+else
+  echo "✗ FAIL: secrets-check.sh NOT configured in settings.json"
+fi
+
+DANGEROUS_CONFIGURED=$(jq -r '.hooks.PreToolUse[]?.hooks[]? | select(contains("block-dangerous"))' "$SETTINGS" 2>/dev/null)
+if [ -n "$DANGEROUS_CONFIGURED" ]; then
+  echo "✓ block-dangerous.sh configured in PreToolUse"
+else
+  echo "✗ FAIL: block-dangerous.sh NOT configured in settings.json"
+fi
 ```
 
-### 3d. Report Hook Status
+### 3d. Enforcement Decision
+
+**If ANY check failed:**
 
 ```
-Hook Verification:
-✓ ruff-format.sh exists
-✓ ruff-check.sh exists
-✓ secrets-check.sh exists
-✓ block-dangerous.sh exists
-
-All required hooks available.
+┌─────────────────────────────────────────────────────────────────┐
+│  HOOK ENFORCEMENT FAILED                                         │
+│                                                                  │
+│  Missing hooks in settings.json:                                 │
+│  - {list failed hooks}                                          │
+│                                                                  │
+│  Swarm CANNOT proceed without enforced hooks.                   │
+│                                                                  │
+│  To fix:                                                         │
+│  1. Run install.sh from claude-swarm-generator repo             │
+│  2. Or manually add hooks to ~/.claude/settings.json            │
+│  3. Restart Claude Code                                          │
+│  4. Re-run /deploy-swarm                                        │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-OR if created:
+**STOP HERE. Do not proceed to Step 4.**
+
+**If ALL checks passed:**
 
 ```
-Hook Verification:
-✓ ruff-format.sh exists
-✗ custom-linter.sh MISSING → Created
-✓ secrets-check.sh exists
-
-Created 1 new hook.
+┌─────────────────────────────────────────────────────────────────┐
+│  HOOK ENFORCEMENT PASSED ✓                                       │
+│                                                                  │
+│  All required hooks verified:                                    │
+│  ✓ File exists    ✓ Configured in settings.json                 │
+│                                                                  │
+│  - PostToolUse: {FORMATTER} (Write|Edit|MultiEdit)              │
+│  - PostToolUse: {LINTER} (Write|Edit|MultiEdit)                 │
+│  - PreToolUse: secrets-check.sh (Write|Edit)                    │
+│  - PreToolUse: block-dangerous.sh (Bash)                        │
+│                                                                  │
+│  Proceeding to spawn teammates...                                │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+**Proceed to Step 4.**
 
 ---
 
-## Step 4: Install Hooks to Project
-
-### 4a. Build hooks configuration
-
-**Map stack to hook scripts with ABSOLUTE paths:**
-
-```javascript
-const HOOKS_DIR = "/Users/USERNAME/.claude/swarm-generator/hooks"
-
-// Stack-specific mapping
-const hookConfig = {
-  python: {
-    formatter: `${HOOKS_DIR}/formatters/ruff-format.sh`,
-    linter: `${HOOKS_DIR}/validators/ruff-check.sh`
-  },
-  angular: {
-    formatter: `${HOOKS_DIR}/formatters/prettier.sh`,
-    linter: `${HOOKS_DIR}/validators/eslint.sh`
-  },
-  // ... other stacks
-}
-```
-
-### 4b. Generate settings.json
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": ["/absolute/path/to/formatter.sh"]
-      },
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": ["/absolute/path/to/linter.sh"]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": ["/absolute/path/to/secrets-check.sh"]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": ["/absolute/path/to/block-dangerous.sh"]
-      }
-    ]
-  }
-}
-```
-
-### 4c. Install to project
-
-```bash
-mkdir -p .claude
-# Write or merge into .claude/settings.json
-```
-
----
-
-## Step 5: Create Tasks
+## Step 4: Create Tasks
 
 Create tasks from template with dependencies:
 
@@ -201,7 +181,7 @@ TaskUpdate({ taskId: "2", addBlockedBy: ["1"] })
 
 ---
 
-## Step 6: Sequential Agent Spawning
+## Step 5: Sequential Agent Spawning
 
 **IMPORTANT:** Subagents don't have TaskList/TaskUpdate tools.
 Leader manages all task state.
@@ -229,7 +209,7 @@ TaskUpdate({ taskId: "N", status: "completed" })
 
 ---
 
-## Step 7: Agent Prompts with Hook Awareness
+## Step 6: Agent Prompts with Hook Awareness
 
 **Every agent prompt MUST include hook awareness section:**
 
@@ -242,14 +222,15 @@ You are {ROLE} in a {TEMPLATE} swarm.
 ## Instructions
 {ROLE_SPECIFIC_INSTRUCTIONS}
 
-## Hook Awareness
-These hooks run AUTOMATICALLY after your edits - DO NOT duplicate:
+## Hook Awareness (ENFORCED)
+These hooks are VERIFIED to be configured and WILL run automatically:
 - PostToolUse (Write|Edit): {FORMATTER} auto-formats your code
-- PostToolUse (Write|Edit): {LINTER} auto-fixes lint issues
-- PreToolUse (Write|Edit): secrets-check blocks credentials
+- PostToolUse (Write|Edit): {LINTER} auto-checks for issues
+- PreToolUse (Write|Edit): secrets-check.sh blocks credentials
+- PreToolUse (Bash): block-dangerous.sh blocks destructive commands
 
-If you see formatting issues after an edit, the hook may have failed.
-Report to the user rather than trying to fix manually.
+DO NOT manually run formatters or linters - they run automatically.
+If you see unexpected formatting, the hook is working.
 
 ## When Done
 Return a summary with:
@@ -260,7 +241,7 @@ Return a summary with:
 
 ---
 
-## Step 8: Final Report
+## Step 7: Final Report
 
 ```
 Swarm Complete
@@ -269,11 +250,11 @@ Task: {FEATURE}
 Stack: {STACK}
 Template: {TEMPLATE}
 
-Hooks Installed:
-- PostToolUse: {FORMATTER} (Write|Edit)
-- PostToolUse: {LINTER} (Write|Edit)
-- PreToolUse: secrets-check (Write|Edit)
-- PreToolUse: block-dangerous (Bash)
+Hooks Enforced (verified before execution):
+✓ PostToolUse: {FORMATTER} (Write|Edit)
+✓ PostToolUse: {LINTER} (Write|Edit)
+✓ PreToolUse: secrets-check (Write|Edit)
+✓ PreToolUse: block-dangerous (Bash)
 
 Results:
 #1 [completed] Build      ✓
@@ -281,8 +262,8 @@ Results:
 #3 [completed] Validate   ✓ (N tests passed)
 #4 [completed] Document   ✓
 
-Hooks remain in .claude/settings.json
-Run /cleanup-swarm to remove
+Hooks remain in ~/.claude/settings.json
+Run /cleanup-swarm to remove tasks
 ```
 
 ---
@@ -327,7 +308,7 @@ Run /cleanup-swarm to remove
 
 ## Error Handling
 
-- **Hook missing:** Create it using template above, then continue
-- **Hook fails:** Report to user, continue without that hook
-- **Agent fails:** Mark task failed, ask user how to proceed
-- **Tests fail:** Report failures, optionally create refactor task
+- **Hook file missing:** STOP. User must install hooks first.
+- **Hook not in settings.json:** STOP. User must run install.sh or manually configure.
+- **Agent fails:** Mark task failed, ask user how to proceed.
+- **Tests fail:** Report failures, optionally loop back to builder for refactor.
