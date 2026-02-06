@@ -91,20 +91,20 @@ Project settings merge with global — you can have baseline hooks everywhere pl
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": ["ruff format $CLAUDE_FILE_PATHS"]
+        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
+        "hooks": [{"type": "command", "command": "ruff format $CLAUDE_FILE_PATHS"}]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": ["./.claude/hooks/validate-command.sh"]
+        "matcher": {"tools": ["Bash"]},
+        "hooks": [{"type": "command", "command": "./.claude/hooks/validate-command.sh"}]
       }
     ],
     "Notification": [
       {
-        "matcher": "",
-        "hooks": ["osascript -e 'display notification \"Claude needs you\"'"]
+        "matcher": {},
+        "hooks": [{"type": "command", "command": "osascript -e 'display notification \"Claude needs you\"'"}]
       }
     ]
   }
@@ -112,8 +112,8 @@ Project settings merge with global — you can have baseline hooks everywhere pl
 ```
 
 **Key fields:**
-- `matcher`: Regex against tool names (empty string = match all)
-- `hooks`: Array of commands to run sequentially
+- `matcher`: Object with `tools` array to match tool names (empty object `{}` = match all)
+- `hooks`: Array of objects with `type` ("command") and `command` (shell command to run)
 
 ### Hook Input/Output
 
@@ -146,10 +146,10 @@ Project settings merge with global — you can have baseline hooks everywhere pl
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
         "hooks": [
-          "npx prettier --write $CLAUDE_FILE_PATHS",
-          "npx eslint --fix $CLAUDE_FILE_PATHS"
+          {"type": "command", "command": "npx prettier --write $CLAUDE_FILE_PATHS"},
+          {"type": "command", "command": "npx eslint --fix $CLAUDE_FILE_PATHS"}
         ]
       }
     ]
@@ -178,8 +178,8 @@ echo '{"decision": "allow"}'
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": ["./.claude/hooks/block-dangerous.sh"]
+        "matcher": {"tools": ["Bash"]},
+        "hooks": [{"type": "command", "command": "./.claude/hooks/block-dangerous.sh"}]
       }
     ]
   }
@@ -193,8 +193,8 @@ echo '{"decision": "allow"}'
   "hooks": {
     "Notification": [
       {
-        "matcher": "",
-        "hooks": ["osascript -e 'display notification \"Claude needs you\" with title \"Claude Code\"'"]
+        "matcher": {},
+        "hooks": [{"type": "command", "command": "osascript -e 'display notification \"Claude needs you\" with title \"Claude Code\"'"}]
       }
     ]
   }
@@ -208,8 +208,8 @@ echo '{"decision": "allow"}'
   "hooks": {
     "Stop": [
       {
-        "matcher": "",
-        "hooks": ["npm test --silent 2>&1 | tail -5"]
+        "matcher": {},
+        "hooks": [{"type": "command", "command": "npm test --silent 2>&1 | tail -5"}]
       }
     ]
   }
@@ -569,10 +569,10 @@ your-project/
 // .claude/settings.json
 {
   "hooks": {
-    "PostToolUse": [{ "matcher": "Write|Edit", "hooks": ["prettier --write $CLAUDE_FILE_PATHS"] }],
-    "PreToolUse": [{ "matcher": "Bash", "hooks": ["./validate.sh"] }],
-    "Notification": [{ "matcher": "", "hooks": ["notify-send 'Claude'"] }],
-    "Stop": [{ "matcher": "", "hooks": ["npm test"] }]
+    "PostToolUse": [{ "matcher": {"tools": ["Write", "Edit"]}, "hooks": [{"type": "command", "command": "prettier --write $CLAUDE_FILE_PATHS"}] }],
+    "PreToolUse": [{ "matcher": {"tools": ["Bash"]}, "hooks": [{"type": "command", "command": "./validate.sh"}] }],
+    "Notification": [{ "matcher": {}, "hooks": [{"type": "command", "command": "notify-send 'Claude'"}] }],
+    "Stop": [{ "matcher": {}, "hooks": [{"type": "command", "command": "npm test"}] }]
   }
 }
 ```
