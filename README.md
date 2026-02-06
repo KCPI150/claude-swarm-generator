@@ -245,18 +245,18 @@ Hooks are installed to `.claude/settings.json` in your project:
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": ["/path/to/ruff-format.sh"]
+        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
+        "hooks": [{"type": "command", "command": "/path/to/ruff-format.sh"}]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit",
-        "hooks": ["/path/to/secrets-check.sh"]
+        "matcher": {"tools": ["Write", "Edit"]},
+        "hooks": [{"type": "command", "command": "/path/to/secrets-check.sh"}]
       },
       {
-        "matcher": "Bash",
-        "hooks": ["/path/to/block-dangerous.sh"]
+        "matcher": {"tools": ["Bash"]},
+        "hooks": [{"type": "command", "command": "/path/to/block-dangerous.sh"}]
       }
     ]
   }

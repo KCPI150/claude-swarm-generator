@@ -99,8 +99,8 @@ if [ ! -f "$SETTINGS" ]; then
   exit 1
 fi
 
-# Check PostToolUse hooks are configured
-FORMATTER_CONFIGURED=$(jq -r '.hooks.PostToolUse[]?.hooks[]? | select(contains("{FORMATTER}"))' "$SETTINGS" 2>/dev/null)
+# Check PostToolUse hooks are configured (v2.1.33+ format: hooks are objects with .command)
+FORMATTER_CONFIGURED=$(jq -r '[.hooks.PostToolUse[]?.hooks[]?.command? // empty] | map(select(contains("{FORMATTER}"))) | .[]' "$SETTINGS" 2>/dev/null)
 if [ -n "$FORMATTER_CONFIGURED" ]; then
   echo "✓ {FORMATTER} configured in PostToolUse"
 else
@@ -108,14 +108,14 @@ else
 fi
 
 # Check PreToolUse security hooks
-SECRETS_CONFIGURED=$(jq -r '.hooks.PreToolUse[]?.hooks[]? | select(contains("secrets-check"))' "$SETTINGS" 2>/dev/null)
+SECRETS_CONFIGURED=$(jq -r '[.hooks.PreToolUse[]?.hooks[]?.command? // empty] | map(select(contains("secrets-check"))) | .[]' "$SETTINGS" 2>/dev/null)
 if [ -n "$SECRETS_CONFIGURED" ]; then
   echo "✓ secrets-check.sh configured in PreToolUse"
 else
   echo "✗ FAIL: secrets-check.sh NOT configured in settings.json"
 fi
 
-DANGEROUS_CONFIGURED=$(jq -r '.hooks.PreToolUse[]?.hooks[]? | select(contains("block-dangerous"))' "$SETTINGS" 2>/dev/null)
+DANGEROUS_CONFIGURED=$(jq -r '[.hooks.PreToolUse[]?.hooks[]?.command? // empty] | map(select(contains("block-dangerous"))) | .[]' "$SETTINGS" 2>/dev/null)
 if [ -n "$DANGEROUS_CONFIGURED" ]; then
   echo "✓ block-dangerous.sh configured in PreToolUse"
 else
