@@ -11,6 +11,10 @@ echo "Removing Claude Swarm Generator..."
 rm -rf "$CLAUDE_DIR/swarm-generator"
 echo "  ✓ Removed ~/.claude/swarm-generator/"
 
+# Remove agent configs
+rm -rf "$CLAUDE_DIR/agents/swarm"
+echo "  ✓ Removed ~/.claude/agents/swarm/"
+
 # Remove skills
 rm -rf "$CLAUDE_DIR/skills/deploy-swarm"
 rm -rf "$CLAUDE_DIR/skills/cleanup-swarm"
