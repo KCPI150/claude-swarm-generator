@@ -1,7 +1,7 @@
 {
   "name": "dev-pipeline",
   "display_name": "Development Pipeline",
-  "description": "Build -> Lint -> Test -> Document workflow",
+  "description": "Build -> Test -> Lint -> Document workflow",
   "version": "2.2",
   "execution_mode": "sequential",
   "summary_file": "docs/SWARM-SUMMARY.md",
@@ -44,18 +44,18 @@
       "order": 1
     },
     {
-      "subject": "Lint: Format and verify",
-      "description": "Verify code quality and fix style issues.",
-      "activeForm": "Linting...",
-      "agent": "linter",
-      "order": 2,
-      "blockedBy": [1]
-    },
-    {
       "subject": "Validate: Run tests",
       "description": "Run test suite and report results.",
       "activeForm": "Testing...",
       "agent": "validator",
+      "order": 2,
+      "blockedBy": [1]
+    },
+    {
+      "subject": "Lint: Format and verify",
+      "description": "Verify code quality and fix style issues.",
+      "activeForm": "Linting...",
+      "agent": "linter",
       "order": 3,
       "blockedBy": [2]
     },
