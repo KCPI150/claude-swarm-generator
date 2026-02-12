@@ -22,26 +22,34 @@ else
 fi
 
 # Step 1: Install swarm-generator
-echo "[1/4] Installing swarm-generator..."
+echo "[1/5] Installing swarm-generator..."
 mkdir -p "$CLAUDE_DIR"
 cp -r "$SCRIPT_DIR/swarm-generator" "$CLAUDE_DIR/"
 echo "  ✓ Copied to ~/.claude/swarm-generator/"
 
-# Step 2: Install skills
-echo "[2/4] Installing skills..."
+# Step 2: Install agent configs
+echo "[2/5] Installing agent configs..."
+mkdir -p "$CLAUDE_DIR/agents"
+cp -r "$SCRIPT_DIR/agents/swarm" "$CLAUDE_DIR/agents/"
+echo "  ✓ Copied agent configs to ~/.claude/agents/swarm/"
+AGENT_COUNT=$(find "$CLAUDE_DIR/agents/swarm" -name "*.json" | wc -l | tr -d ' ')
+echo "  ✓ Installed $AGENT_COUNT agent configs (6 stacks × 4 roles)"
+
+# Step 3: Install skills
+echo "[3/5] Installing skills..."
 mkdir -p "$CLAUDE_DIR/skills"
 cp -r "$SCRIPT_DIR/skills/deploy-swarm" "$CLAUDE_DIR/skills/"
 cp -r "$SCRIPT_DIR/skills/cleanup-swarm" "$CLAUDE_DIR/skills/"
 echo "  ✓ Installed deploy-swarm skill"
 echo "  ✓ Installed cleanup-swarm skill"
 
-# Step 3: Make hooks executable
-echo "[3/4] Setting hook permissions..."
+# Step 4: Make hooks executable
+echo "[4/5] Setting hook permissions..."
 find "$CLAUDE_DIR/swarm-generator/hooks" -name "*.sh" -exec chmod +x {} \;
 echo "  ✓ All hooks are now executable"
 
-# Step 4: Configure hooks in settings.json
-echo "[4/4] Configuring hooks..."
+# Step 5: Configure hooks in settings.json
+echo "[5/5] Configuring hooks..."
 
 if [ "$JQ_AVAILABLE" = true ]; then
     SETTINGS_FILE="$CLAUDE_DIR/settings.json"
@@ -108,8 +116,12 @@ echo "==================================="
 echo ""
 echo "Installed:"
 echo "  • ~/.claude/swarm-generator/ (stacks, templates, hooks)"
+echo "  • ~/.claude/agents/swarm/ (pre-configured agent definitions)"
 echo "  • ~/.claude/skills/deploy-swarm/"
 echo "  • ~/.claude/skills/cleanup-swarm/"
+echo ""
+echo "Agent stacks available:"
+echo "  python, angular, airflow, terraform, sql, yaml"
 echo ""
 echo "Usage:"
 echo "  /deploy-swarm              # Deploy a multi-agent swarm"

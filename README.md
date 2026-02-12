@@ -11,6 +11,8 @@ This tool generates **swarms**—coordinated teams of Claude agents that work to
 - **Enforced hooks** that are verified before any subagent spawns
 - **Feedback loops** where validators can trigger builder refactors
 
+**v2.4:** Agent configs are now externalized to `~/.claude/agents/swarm/`. Model selection (opus for builder, haiku for linter/validator/documenter) and system prompts are version-controlled.
+
 **v2.3:** Hook enforcement is now a blocking gate. Swarms will NOT start unless all required hooks are verified to be configured in `~/.claude/settings.json`.
 
 ## Key Concepts
@@ -76,17 +78,47 @@ Hooks are shell scripts that run **automatically** at specific lifecycle events�
 | `Notification` | Claude wants attention | Desktop alerts | `notify-macos.sh` |
 | `Stop` | Claude finishes | Run tests | `npm test` |
 
+## Agent Configs (v2.4)
+
+Each agent is defined by a JSON config in `~/.claude/agents/swarm/{stack}/{role}.json`:
+
+```json
+{
+  "name": "python-builder",
+  "model": "opus",
+  "role": "builder",
+  "stack": "python",
+  "systemPrompt": "You are BUILDER in a Python swarm...",
+  "hookAwareness": {
+    "formatter": "ruff-format.sh",
+    "linter": "ruff-check.sh",
+    "security": ["secrets-check.sh", "block-dangerous.sh"]
+  },
+  "allowedTools": ["Read", "Glob", "Grep", "Edit", "Write"]
+}
+```
+
+**Model Selection (optimized for cost):**
+- **Builder:** `opus` — complex reasoning, code generation
+- **Linter:** `haiku` — fast, cost-efficient style checks
+- **Validator:** `haiku` — run tests, report results
+- **Documenter:** `haiku` — summarize, write reports
+
+**Token cost savings:** ~40-50% compared to all-Sonnet baseline.
+
+**Available stacks:** python, angular, airflow, terraform, sql, yaml (6 stacks × 4 roles = 24 configs)
+
 ## Templates & Teammates
 
 ### dev-pipeline
-**Workflow:** Build → Lint → Test → Document
+**Workflow:** Build → Test → Lint → Document
 
-| Teammate | Role | Allowed Tools |
-|----------|------|---------------|
-| **builder** | Writes code, implements features | Read, Glob, Grep, Edit, Write |
-| **linter** | Formats code, fixes lint errors | Read, Glob, Grep, Edit, Bash |
-| **validator** | Runs tests, reports failures | Read, Glob, Grep, Bash, Edit |
-| **documenter** | Summarizes project status | Read, Glob, Grep, Edit |
+| Teammate | Role | Model | Allowed Tools |
+|----------|------|-------|---------------|
+| **builder** | Writes code, implements features | opus | Read, Glob, Grep, Edit, Write |
+| **validator** | Runs tests, reports failures | haiku | Read, Glob, Grep, Bash, Edit |
+| **linter** | Formats code, fixes lint errors | haiku | Read, Glob, Grep, Edit, Bash |
+| **documenter** | Summarizes project status | haiku | Read, Glob, Grep, Edit |
 
 ### code-review
 **Workflow:** Review → Security → Approve → Document
@@ -165,9 +197,10 @@ chmod +x install.sh
 **Restart Claude Code** for hooks to take effect.
 
 This installs:
-- Swarm generator to `~/.claude/swarm-generator/`
-- Skills to `~/.claude/skills/`
-- Hooks to `~/.claude/swarm-generator/hooks/`
+- Swarm generator to `~/.claude/swarm-generator/` (stacks, templates, hooks)
+- Agent configs to `~/.claude/agents/swarm/` (24 pre-configured agent definitions)
+- Skills to `~/.claude/skills/deploy-swarm/` and `~/.claude/skills/cleanup-swarm/`
+- Hooks configured in `~/.claude/settings.json`
 
 ## Usage
 
@@ -195,17 +228,17 @@ Hook Verification:
 
 Creating tasks...
 #1 Build: Add JWT authentication
-#2 Lint: Format and verify (blocked by #1)
-#3 Validate: Run tests (blocked by #2)
+#2 Validate: Run tests (blocked by #1)
+#3 Lint: Format and verify (blocked by #2)
 #4 Document: Summarize status (blocked by #3)
 
-[1/4] Building...
+[1/4] Building... (opus)
   → builder completed: created auth.py, jwt_utils.py
-[2/4] Linting...
-  → linter completed: 0 issues
-[3/4] Validating...
+[2/4] Validating... (haiku)
   → validator completed: 12 tests passed
-[4/4] Documenting...
+[3/4] Linting... (haiku)
+  → linter completed: 0 issues
+[4/4] Documenting... (haiku)
   → documenter completed: updated SWARM-SUMMARY.md
 
 Swarm Complete ✓
@@ -303,7 +336,9 @@ Each teammate has explicit tool restrictions to prevent scope creep:
 ./uninstall.sh
 ```
 
-Removes swarm-generator, skills, and hooks from `~/.claude/`.
+Removes swarm-generator, agent configs, and skills from `~/.claude/`.
+
+**Note:** Hooks in `~/.claude/settings.json` are NOT removed automatically. Edit that file manually if needed.
 
 ## Requirements
 
@@ -315,11 +350,31 @@ Removes swarm-generator, skills, and hooks from `~/.claude/`.
   - Terraform: `terraform`, `tflint`
   - etc.
 
-## Custom Stacks & Templates
+## Customization
+
+### Custom Agent Behavior
+
+Edit agent configs to change how teammates behave:
+
+```bash
+# Edit Python builder's system prompt
+vi ~/.claude/agents/swarm/python/builder.json
+
+# Change model selection (opus/haiku/sonnet)
+jq '.model = "sonnet"' ~/.claude/agents/swarm/python/linter.json
+
+# Modify tool restrictions
+jq '.allowedTools += ["WebFetch"]' ~/.claude/agents/swarm/python/builder.json
+```
+
+Changes apply globally for that stack/role combination.
+
+### Custom Stacks & Templates
 
 Add custom configurations to:
 - `~/.claude/swarm-generator/stacks/custom/`
 - `~/.claude/swarm-generator/templates/custom/`
+- `~/.claude/agents/swarm/custom/` (if creating a new stack)
 
 See existing JSON files for the schema.
 
