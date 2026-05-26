@@ -5,9 +5,12 @@
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 
+HOOK_ALLOW='{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'
+HOOK_DENY_PREFIX='{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":'
+
 # Only check Write/Edit operations
 if [[ "$TOOL_NAME" != "Write" && "$TOOL_NAME" != "Edit" ]]; then
-  echo '{"decision": "allow"}'
+  echo "$HOOK_ALLOW"
   exit 0
 fi
 
@@ -29,9 +32,9 @@ PATTERNS=(
 
 for pattern in "${PATTERNS[@]}"; do
   if echo "$CONTENT" | grep -qiE "$pattern"; then
-    echo '{"decision": "block", "reason": "Potential secret detected. Review the content before committing."}'
+    echo "${HOOK_DENY_PREFIX}\"Potential secret detected. Review the content before committing.\"}}"
     exit 0
   fi
 done
 
-echo '{"decision": "allow"}'
+echo "$HOOK_ALLOW"

@@ -63,31 +63,35 @@ if [ "$JQ_AVAILABLE" = true ]; then
     # Backup existing settings
     cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%s)"
 
-    # Create hooks configuration (v2.1.33+ format: matcher as object, hooks as objects)
+    # Create hooks configuration (v2.1.33+ format: matcher is a string regex, hooks is array of objects)
     HOOKS_CONFIG=$(cat <<EOF
 {
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [{"type": "command", "command": "$HOOKS_DIR/formatters/ruff-format.sh"}]
       },
       {
-        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [{"type": "command", "command": "$HOOKS_DIR/formatters/prettier.sh"}]
       },
       {
-        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [{"type": "command", "command": "$HOOKS_DIR/validators/ruff-check.sh"}]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": "$HOOKS_DIR/validators/eslint.sh"}]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": {"tools": ["Write", "Edit"]},
+        "matcher": "Write|Edit",
         "hooks": [{"type": "command", "command": "$HOOKS_DIR/security/secrets-check.sh"}]
       },
       {
-        "matcher": {"tools": ["Bash"]},
+        "matcher": "Bash",
         "hooks": [{"type": "command", "command": "$HOOKS_DIR/security/block-dangerous.sh"}]
       }
     ]

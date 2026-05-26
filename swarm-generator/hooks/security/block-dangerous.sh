@@ -5,9 +5,12 @@
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 
+HOOK_ALLOW='{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'
+HOOK_DENY_PREFIX='{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":'
+
 # Only check Bash commands
 if [[ "$TOOL_NAME" != "Bash" ]]; then
-  echo '{"decision": "allow"}'
+  echo "$HOOK_ALLOW"
   exit 0
 fi
 
@@ -37,16 +40,16 @@ REGEX_PATTERNS=(
 
 for pattern in "${LITERAL_PATTERNS[@]}"; do
   if echo "$COMMAND" | grep -qiF -- "$pattern"; then
-    echo "{\"decision\": \"block\", \"reason\": \"Dangerous command blocked: $pattern\"}"
+    echo "${HOOK_DENY_PREFIX}\"Dangerous command blocked: $pattern\"}}"
     exit 0
   fi
 done
 
 for pattern in "${REGEX_PATTERNS[@]}"; do
   if echo "$COMMAND" | grep -qiE -- "$pattern"; then
-    echo "{\"decision\": \"block\", \"reason\": \"Dangerous command blocked: $pattern\"}"
+    echo "${HOOK_DENY_PREFIX}\"Dangerous command blocked: $pattern\"}}"
     exit 0
   fi
 done
 
-echo '{"decision": "allow"}'
+echo "$HOOK_ALLOW"

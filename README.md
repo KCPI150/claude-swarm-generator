@@ -188,8 +188,8 @@ Each stack defines language-specific tooling:
 ## Installation
 
 ```bash
-git clone https://github.com/KCPI150/claude-swarm-generator
-cd claude-swarm-generator
+git clone https://bitbucket.org/predictx/keesup-testing
+cd keesup-testing/claude/swarm-generator
 chmod +x install.sh
 ./install.sh
 ```
@@ -271,30 +271,48 @@ Results saved to: docs/SWARM-SUMMARY.md
 
 ### Hook Configuration
 
-Hooks are installed to `.claude/settings.json` in your project:
+Hooks are configured in `~/.claude/settings.json` (global, not per-project).
+
+`install.sh` adds these entries automatically. If you need to add them manually:
 
 ```json
 {
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": {"tools": ["Write", "Edit", "MultiEdit"]},
-        "hooks": [{"type": "command", "command": "/path/to/ruff-format.sh"}]
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": "/Users/YOU/.claude/swarm-generator/hooks/formatters/ruff-format.sh"}]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": "/Users/YOU/.claude/swarm-generator/hooks/formatters/prettier.sh"}]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": "/Users/YOU/.claude/swarm-generator/hooks/validators/ruff-check.sh"}]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": "/Users/YOU/.claude/swarm-generator/hooks/validators/eslint.sh"}]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": {"tools": ["Write", "Edit"]},
-        "hooks": [{"type": "command", "command": "/path/to/secrets-check.sh"}]
+        "matcher": "Write|Edit",
+        "hooks": [{"type": "command", "command": "/Users/YOU/.claude/swarm-generator/hooks/security/secrets-check.sh"}]
       },
       {
-        "matcher": {"tools": ["Bash"]},
-        "hooks": [{"type": "command", "command": "/path/to/block-dangerous.sh"}]
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "/Users/YOU/.claude/swarm-generator/hooks/security/block-dangerous.sh"}]
       }
     ]
   }
 }
 ```
+
+> **Format note (v2.1.33+):** `matcher` is a **string regex** (`"Write|Edit|MultiEdit"`), NOT an object. Using an object form silently breaks hook firing.
+
+Replace `/Users/YOU` with your actual home path (`echo $HOME`).
 
 ### How Hooks Work
 
